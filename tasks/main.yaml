@@ -1,0 +1,43 @@
+---
+
+- name: GRAFANA
+  become: true
+  tags:
+    - grafana
+  when: grafana_active
+  block:
+
+    - name: GRAFANA install
+      community.general.pacman:
+        name: grafana
+        state: present
+
+    - name: GRAFANA template `/etc/grafana.ini`
+      ansible.builtin.template:
+        src: "{{ role_path }}/templates/grafana.ini.j2"
+        dest: /etc/grafana.ini
+        owner: grafana
+        group: grafana
+        mode: "0640"
+      notify: GRAFANA restart
+
+    - name: GRAFANA template `/etc/pacman.d/hooks/30-grafana.hook`
+      ansible.builtin.template:
+        src: "{{ role_path }}/templates/grafana.hook.j2"
+        dest: /etc/pacman.d/hooks/30-grafana.hook
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: GRAFANA service enable/disable
+      ansible.builtin.systemd_service:
+        enabled: "{{ grafana_service_enabled }}"
+        name: "{{ grafana_service_name }}"
+        state: "{{ grafana_service_state }}"
+
+    - name: GRAFANA cleanup
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/grafana/grafana.ini.pacnew
