@@ -450,7 +450,7 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 # Set Content Security Policy template used when adding the Content-Security-Policy header to your requests.
 # $NONCE in the template includes a random nonce.
 # $ROOT_PATH is server.root_url without the protocol.
-;content_security_policy_template = """script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://$ROOT_PATH wss://$ROOT_PATH;manifest-src 'self';media-src 'none';form-action 'self' $FORM_ACTION_ADDITIONAL_HOSTS;"""
+;content_security_policy_template = """script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com *.cartocdn.com ws://$ROOT_PATH wss://$ROOT_PATH;manifest-src 'self';media-src 'none';form-action 'self' $FORM_ACTION_ADDITIONAL_HOSTS;"""
 
 # Enable adding the Content-Security-Policy-Report-Only header to your requests.
 # Allows you to monitor the effects of a policy without enforcing it.
@@ -459,7 +459,7 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 # Set Content Security Policy Report Only template used when adding the Content-Security-Policy-Report-Only header to your requests.
 # $NONCE in the template includes a random nonce.
 # $ROOT_PATH is server.root_url without the protocol.
-;content_security_policy_report_only_template = """script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://$ROOT_PATH wss://$ROOT_PATH;manifest-src 'self';media-src 'none';form-action 'self' $FORM_ACTION_ADDITIONAL_HOSTS;"""
+;content_security_policy_report_only_template = """script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com *.cartocdn.com ws://$ROOT_PATH wss://$ROOT_PATH;manifest-src 'self';media-src 'none';form-action 'self' $FORM_ACTION_ADDITIONAL_HOSTS;"""
 
 # Space-separated list of additional hostnames to allow in the CSP form-action directive.
 # $FORM_ACTION_ADDITIONAL_HOSTS in the CSP template is replaced with this value.
@@ -515,6 +515,10 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 
 # Path to the default home dashboard. If this value is empty, then Grafana uses StaticRootPath + "dashboards/home.json"
 ;default_home_dashboard_path =
+
+# Instance-wide default for panel preloading, used only for dashboards that do not explicitly set the "preload" property.
+# An explicit "preload" value in the dashboard JSON always takes precedence. Default is false.
+;default_preload = false
 
 ################################### Dashboard cleanup ####################
 [dashboard_cleanup]
@@ -754,6 +758,8 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 ;tls_client_ca =
 # GitHub OAuth apps does not provide refresh tokens and the access tokens never expires.
 ;use_refresh_token = false
+# Timeout in seconds for the token exchange request. Defaults to 15 seconds.
+;token_exchange_timeout = 15
 
 #################################### GitLab Auth #########################
 [auth.gitlab]
@@ -784,6 +790,8 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 ;use_refresh_token = true
 ;validate_id_token = false
 ;jwk_set_url = https://www.googleapis.com/oauth2/v3/certs
+# Timeout in seconds for the token exchange request. Defaults to 15 seconds.
+;token_exchange_timeout = 15
 
 #################################### Google Auth ##########################
 [auth.google]
@@ -816,6 +824,8 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 ;use_refresh_token = true
 ;validate_id_token = false
 ;jwk_set_url = https://gitlab.com/oauth/discovery/keys
+# Timeout in seconds for the token exchange request. Defaults to 15 seconds.
+;token_exchange_timeout = 15
 
 #################################### Grafana.com Auth ####################
 [auth.grafana_com]
@@ -858,6 +868,8 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 # prevent synchronizing users organization roles
 ;skip_org_role_sync = false
 ;use_refresh_token = true
+# Timeout in seconds for the token exchange request. Defaults to 15 seconds.
+;token_exchange_timeout = 15
 
 #################################### Okta OAuth #######################
 [auth.okta]
@@ -889,6 +901,8 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 ;validate_id_token = false
 ;# jwk_set_url requires tenant-id: https://<tenant-id>.okta.com/oauth2/v1/keys
 ;jwk_set_url =
+# Timeout in seconds for the token exchange request. Defaults to 15 seconds.
+;token_exchange_timeout = 15
 
 #################################### Generic OAuth ##########################
 [auth.generic_oauth]
@@ -932,6 +946,8 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 ;use_refresh_token = false
 ;validate_id_token = false
 ;jwk_set_url =
+# Timeout in seconds for the token exchange request. Defaults to 15 seconds.
+;token_exchange_timeout = 15
 
 #################################### Basic Auth ##########################
 [auth.basic]
@@ -955,7 +971,6 @@ serve_from_sub_path = {{ grafana_config_server_serve_from_sub_path }}
 #################################### Auth JWT ##########################
 [auth.jwt]
 ;enabled = true
-;enable_login_token = false
 ;header_name = X-JWT-Assertion
 ;email_claim = sub
 ;username_claim = sub
@@ -1741,8 +1756,9 @@ default_datasource_uid =
 # Storage backend for annotations. Options: "legacy-sql" (default), "grpc", or "postgres"
 ;store_backend = legacy-sql
 
-# Retention TTL for annotations - old data will be cleaned up
-;retention_ttl = 2160h
+# Retention TTL for annotations - old data will be cleaned up after this period.
+# 0 disables retention (no cleanup). A positive duration enables it.
+;retention_ttl = 0
 
 # Generate and persist grafana.app/legacyID labels for legacy API compatibility.
 ;enable_legacy_id = false
@@ -1909,6 +1925,18 @@ default_datasource_uid =
 # When set to `false`, the OTLP client will use TLS credentials with the default system cert pool for communication.
 ; insecure = false
 
+# This captures Grafana's own traces to a local OTLP/JSON file for offline
+# analysis (e.g. upload to Grafana via Explore) without running a tracing
+# backend. Intended for support captures: enable it, reproduce the issue, then
+# collect the file. Only used when no jaeger/otlp endpoint is configured.
+[tracing.opentelemetry.file]
+# path to the OTLP/JSON capture file. Setting this enables the file exporter.
+; path = /var/lib/grafana/traces/capture.json
+# stop capturing once the file reaches this size in bytes (default 104857600, 100MiB; must be greater than 0)
+; max_file_size_bytes = 104857600
+# stop capturing this long after startup (default 10m; must be greater than 0)
+; capture_duration = 10m
+
 #################################### External image storage ##########################
 [external_image_storage]
 # Used for uploading images to public servers so they can be included in slack/email messages.
@@ -2006,6 +2034,12 @@ default_datasource_uid =
 # Disables preinstall feature. It has the same effect as setting preinstall to an empty list.
 ; preinstall_disabled = false
 
+#################################### Marketplace ####################################
+[marketplace]
+# Directory containing per-plugin marketplace licenses named license-<plugin_id>.jwt
+# Defaults to the Grafana data path, alongside the default Enterprise license.jwt file.
+;license_directory =
+
 #################################### Grafana Live ##########################################
 [live]
 # max_connections to Grafana Live WebSocket endpoint per Grafana server instance. See Grafana Live docs
@@ -2022,7 +2056,8 @@ default_datasource_uid =
 ;ha_engine =
 
 # ha_engine_address sets a connection address for Live HA engine. Depending on engine type address format can differ.
-# For now we only support Redis connection address in "host:port" format.
+# For Redis, it's a "host:port" string or a redis:// / rediss:// connection URL (rediss:// enables TLS),
+# e.g. "rediss://my-redis:6380". A password set in the URL (even an empty one) takes precedence; ha_engine_password applies when the URL sets none.
 ;ha_engine_address = "127.0.0.1:6379"
 
 # ha_engine_password allows setting an optional password to authenticate with the engine
@@ -2287,6 +2322,9 @@ default_datasource_uid =
 
 #################################### Provisioning ####################################
 [provisioning]
+# Enable or disable Git Sync / as-code provisioning for Grafana resources.
+;enabled = true
+
 # Name of the header carrying the real client IP, used to key webhook per-client
 # rate limiting. Empty (default) ignores client-controlled headers and keys on
 # the real TCP peer. Set it (e.g. X-Real-Ip) only when behind a proxy that
